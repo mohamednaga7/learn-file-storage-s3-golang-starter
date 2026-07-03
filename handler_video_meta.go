@@ -1,29 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"
 	"github.com/google/uuid"
 )
-
-func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration, context context.Context) (string, error) {
-	presignedClient := s3.NewPresignClient(s3Client)
-	object, err := presignedClient.PresignGetObject(context, &s3.GetObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	}, s3.WithPresignExpires(expireTime))
-	if err != nil {
-		return "", err
-	}
-
-	return object.URL, nil
-}
 
 func (cfg *apiConfig) handlerVideoMetaCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
@@ -111,13 +95,7 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resultingVideo, err := cfg.dbVideoToSignedVideo(video, r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't get video url", err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, resultingVideo)
+	respondWithJSON(w, http.StatusOK, video)
 }
 
 func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Request) {
@@ -138,16 +116,5 @@ func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resultingVideos := make([]database.Video, 0, len(videos))
-
-	for _, video := range videos {
-		resultingVideo, err := cfg.dbVideoToSignedVideo(video, r.Context())
-		if err == nil {
-			resultingVideos = append(resultingVideos, resultingVideo)
-		} else {
-			resultingVideos = append(resultingVideos, video)
-		}
-	}
-
-	respondWithJSON(w, http.StatusOK, resultingVideos)
+	respondWithJSON(w, http.StatusOK, videos)
 }
